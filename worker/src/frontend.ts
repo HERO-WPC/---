@@ -154,7 +154,7 @@ export const FRONTEND_HTML = `
       renderPreviews();
     };
 
-    // 上传文件到 Workers KV
+    // 上传文件（优先使用 GitHub，如果未配置则使用 Workers KV）
     async function uploadFile(file) {
       const formData = new FormData();
       formData.append('file', file);

@@ -8,7 +8,7 @@
 - 📎 支持任意格式文件 (图片、视频、文档等)
 - 🔒 单文件最大 100MB
 - 📚 最多 5 个附件
-- 📎 支持图片、视频等文件上传（最大 25MB），存储在 GitHub
+- 📎 支持图片、视频等文件上传（配置 GitHub 时最大 25MB，否则最大 1MB）
 
 ## ☁️ 部署步骤
 
@@ -44,15 +44,20 @@ npx wrangler kv:namespace create "MESSAGES"
 
 #### 创建 GitHub Token
 1. 访问 https://github.com/settings/tokens
-2. 点击 "Generate new token"
-3. 选择 "Fine-grained personal access tokens" 或 "Personal access tokens"
-4. 设置适当的权限（至少需要 repo 权限）
-5. 生成并保存 Token
+2. 点击 "Generate new token" → "Fine-grained personal access tokens" 或 "Personal access tokens"
+3. 对于 "Personal access tokens"，设置适当的权限：
+   - 选择 "repo" 权限（完整仓库访问权限）
+   - 或者更安全的选项是只选择 "Contents" 权限（仓库内容管理权限）
+4. 设置 Token 过期时间，生成并保存 Token
+
+#### 准备 GitHub 仓库
+1. 创建一个新的公开或私有仓库（例如：guestbook-files）
+2. 确保您有向该仓库推送内容的权限
 
 #### 配置环境变量
 在 Cloudflare Workers Dashboard 中配置以下环境变量：
-- `GITHUB_TOKEN`: 你的 GitHub Token
-- `GITHUB_REPO`: 仓库名称（格式：username/repository）
+- `GITHUB_TOKEN`: 你的 GitHub Token（需要有仓库写入权限）
+- `GITHUB_REPO`: 仓库名称（格式：username/repository，例如：HERO-WPC/guestbook-files）
 - `GITHUB_BRANCH`: 分支名称（可选，默认 main）
 - `GITHUB_PATH`: 上传路径（可选，默认 uploads/）
 

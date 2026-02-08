@@ -36,7 +36,7 @@ app.use('/*', cors({
   allowHeaders: ['Content-Type'],
 }))
 
-// 上传文件到 GitHub
+// 上传文件（优先使用 GitHub，如果未配置则使用 Workers KV 存储小文件）
 app.post('/api/upload', async (c) => {
   try {
     const formData = await c.req.formData()
@@ -46,59 +46,118 @@ app.post('/api/upload', async (c) => {
       return c.json({ success: false, error: '没有文件' }, 400)
     }
 
-    // 检查文件大小（限制为 25MB，GitHub 单文件限制）
-    if (file.size > 25 * 1024 * 1024) {
-      return c.json({ success: false, error: '文件太大，最大支持 25MB' }, 400)
-    }
-
-    const fileData = await file.arrayBuffer()
-    const fileBase64 = Array.from(new Uint8Array(fileData))
-      .map(byte => String.fromCharCode(byte))
-      .join('')
-    
-    // 需要配置 GitHub 相关环境变量
+    // 检查文件大小
     const githubToken = c.env.GITHUB_TOKEN
-    const githubRepo = c.env.GITHUB_REPO  // 格式: username/repo
-    const githubBranch = c.env.GITHUB_BRANCH || 'main'
-    const githubPath = c.env.GITHUB_PATH || 'uploads/'
+    const githubRepo = c.env.GITHUB_REPO
     
-    if (!githubToken || !githubRepo) {
-      return c.json({ success: false, error: '未配置 GitHub 上传参数' }, 500)
-    }
+    console.log('GitHub 配置检查:', {
+      hasToken: !!githubToken,
+      hasRepo: !!githubRepo
+    });
+    
+    if (githubToken && githubRepo) {
+      // 使用 GitHub 上传（大文件支持）
+      if (file.size > 25 * 1024 * 1024) { // 25MB 限制
+        return c.json({ success: false, error: '文件太大，使用 GitHub 上传时最大支持 25MB' }, 400)
+      }
 
-    // 生成唯一文件名
-    const fileId = generateUUID()
-    const fileName = fileId + '.' + file.name.split('.').pop()
-    const filePath = githubPath + fileName
+      const fileData = await file.arrayBuffer()
+      // 正确的 base64 编码方式
+      const fileBase64 = btoa(
+        new Uint8Array(fileData)
+          .reduce((data, byte) => data + String.fromCharCode(byte), '')
+      )
+      
+      const githubBranch = c.env.GITHUB_BRANCH || 'main'
+      const githubPath = c.env.GITHUB_PATH || 'uploads/'
 
-    // 上传到 GitHub
-    const uploadRes = await fetch(`https://api.github.com/repos/${githubRepo}/contents/${filePath}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${githubToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        message: `Upload ${file.name} via guestbook`,
-        content: btoa(fileBase64),
+      // 生成唯一文件名
+      const fileId = generateUUID()
+      const fileName = fileId + '.' + file.name.split('.').pop()
+      const filePath = githubPath + fileName
+
+      // 添加调试日志
+      console.log('GitHub 上传信息:', {
+        repo: githubRepo,
+        filePath: filePath,
+        fileSize: file.size,
+        fileName: file.name,
         branch: githubBranch
+      });
+
+      // 上传到 GitHub
+      const uploadRes = await fetch(`https://api.github.com/repos/${githubRepo}/contents/${filePath}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${githubToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: `Upload ${file.name} via guestbook`,
+          content: fileBase64,  // 已经是 base64，不需要再次 btoa
+          branch: githubBranch
+        })
       })
-    })
 
-    const uploadData = await uploadRes.json()
-    if (!uploadRes.ok) {
-      console.error('GitHub 上传失败:', uploadData)
-      return c.json({ success: false, error: '文件上传失败' }, 500)
+      if (!uploadRes.ok) {
+        const uploadData = await uploadRes.text(); // 获取原始响应文本
+        console.error('GitHub 上传失败:', uploadRes.status, uploadData)
+        // 返回更具体的错误信息
+        return c.json({ success: false, error: `GitHub上传失败: HTTP ${uploadRes.status}` }, 500)
+      }
+      const uploadData = await uploadRes.json();
+
+      // 返回 GitHub raw 链接
+      const fileUrl = `https://raw.githubusercontent.com/${githubRepo}/${githubBranch}/${filePath}`
+      
+      return c.json({ success: true, data: { url: fileUrl, key: fileName } })
+    } else {
+      // 使用 Workers KV 作为备选方案（小文件支持）
+      if (file.size > 1024 * 1024) { // 1MB 限制，适用于 KV 存储
+        return c.json({ success: false, error: '文件太大，未配置 GitHub 上传时仅支持小于 1MB 的文件' }, 400)
+      }
+
+      const fileData = await file.arrayBuffer()
+      
+      // 生成唯一文件名
+      const fileId = generateUUID()
+      const fileName = fileId + '.' + file.name.split('.').pop()
+      
+      // 存储文件到 KV
+      await c.env.MESSAGES.put(`file:${fileName}`, fileData, {
+        metadata: {
+          originalName: file.name,
+          contentType: file.type,
+          size: file.size
+        }
+      })
+
+      return c.json({ success: true, data: { url: `/api/files/${fileName}`, key: fileName } })
     }
-
-    // 返回 GitHub raw 链接
-    const fileUrl = `https://raw.githubusercontent.com/${githubRepo}/${githubBranch}/${filePath}`
-    
-    return c.json({ success: true, data: { url: fileUrl, key: fileName } })
   } catch (error) {
     console.error('上传错误:', error)
     return c.json({ success: false, error: '上传失败' }, 500)
   }
+})
+
+// 获取文件
+app.get('/api/files/:id', async (c) => {
+  const fileId = c.req.param('id')
+  const fileData = await c.env.MESSAGES.get(`file:${fileId}`, 'arrayBuffer')
+  
+  if (!fileData) {
+    return c.text('File not found', 404)
+  }
+  
+  // 获取文件元数据
+  const metadata = await c.env.MESSAGES.getWithMetadata(`file:${fileId}`)
+  
+  return new Response(fileData, {
+    headers: {
+      'Content-Type': metadata.metadata?.contentType || 'application/octet-stream',
+      'Content-Disposition': `inline; filename="${metadata.metadata?.originalName || fileId}"`
+    }
+  })
 })
 
 
