@@ -5,6 +5,8 @@ import { FRONTEND_HTML } from './frontend'
 interface Env {
   MESSAGES: KVNamespace
   B2_AUTH: string
+  B2_BUCKET_ID: string
+  B2_BUCKET_NAME: string
 }
 
 interface Message {
@@ -66,7 +68,7 @@ app.post('/api/upload', async (c) => {
     const authData = await authRes.json()
 
     // 获取上传 URL
-    const bucketRes = await fetch(`https://api.backblazeb2.com/b2api/v3/b2_get_upload_url?bucketId=ALL`, {
+    const bucketRes = await fetch(`https://api.backblazeb2.com/b2api/v3/b2_get_upload_url?bucketId=${c.env.B2_BUCKET_ID}`, {
       headers: {
         'Authorization': authData.authorizationToken
       }
@@ -139,7 +141,7 @@ app.get('/api/b2-auth', async (c) => {
     const authData = await authRes.json()
     
     // 获取上传 URL
-    const bucketRes = await fetch(`https://api.backblazeb2.com/b2api/v3/b2_get_upload_url?bucketId=ALL`, {
+    const bucketRes = await fetch(`https://api.backblazeb2.com/b2api/v3/b2_get_upload_url?bucketId=${c.env.B2_BUCKET_ID}`, {
       headers: {
         'Authorization': authData.authorizationToken
       }

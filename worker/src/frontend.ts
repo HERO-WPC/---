@@ -119,7 +119,7 @@ export const FRONTEND_HTML = `
     
     // Backblaze B2 配置
     const B2_CONFIG = {
-      bucketName: 'my-upload-files',
+      bucketName: 'guestbook',
       endpoint: 'https://s3.us-west-004.backblazeb2.com'
     };
 

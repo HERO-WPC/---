@@ -9,6 +9,8 @@
     }
   ],
   "vars": {
-    "B2_AUTH": "MDA0OGM2Mjc1ZDc0MTYzMDAwMDAwMDAwMTpLMDA0Ynk5RGFzdWg2cXRJY05ZSzY5OXdQdC9zcSt3"
+    "B2_AUTH": "MDA0OGM2Mjc1ZDc0MTYzMDAwMDAwMDAwMTpLMDA0Ynk5RGFzdWg2cXRJY05ZSzY5OXdQdC9zcSt3",
+    "B2_BUCKET_ID": "your-bucket-id-here",
+    "B2_BUCKET_NAME": "guestbook"
   }
 }
