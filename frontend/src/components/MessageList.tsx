@@ -26,6 +26,26 @@ function MessageList({ messages }: Props) {
     return url.match(/\.(mp4|webm|mov|avi|mkv)$/i)
   }
 
+  const isImage = (url: string) => {
+    return url.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+  }
+
+  const isPdf = (url: string) => {
+    return url.match(/\.(pdf)$/i)
+  }
+
+  const isDoc = (url: string) => {
+    return url.match(/\.(doc|docx)$/i)
+  }
+
+  const isTxt = (url: string) => {
+    return url.match(/\.(txt)$/i)
+  }
+
+  const isAudio = (url: string) => {
+    return url.match(/\.(mp3|wav|ogg)$/i)
+  }
+
   // 处理图片点击，可以打开模态框
   const handleImageClick = (src: string) => {
     const newWindow = window.open('', '_blank');
@@ -96,6 +116,47 @@ function MessageList({ messages }: Props) {
                         loading="lazy" 
                         style={{ cursor: 'pointer' }}
                         onClick={() => handleImageClick(file)}
+                      />
+                    </div>
+                  );
+                } else if (isPdf(file)) {
+                  return (
+                    <div key={index} className="message-file">
+                      <iframe 
+                        src={file} 
+                        width="100%" 
+                        height="200px" 
+                        style={{ border: 'none', borderRadius: '8px' }}
+                      />
+                    </div>
+                  );
+                } else if (isTxt(file)) {
+                  return (
+                    <div key={index} className="message-file">
+                      <iframe 
+                        src={file} 
+                        width="100%" 
+                        height="200px" 
+                        style={{ border: 'none', borderRadius: '8px' }}
+                      />
+                    </div>
+                  );
+                } else if (isAudio(file)) {
+                  return (
+                    <div key={index} className="message-file">
+                      <audio src={file} controls style={{ width: '100%' }} />
+                    </div>
+                  );
+                } else if (isDoc(file)) {
+                  // 对于文档文件，使用 Google Docs Viewer
+                  const encodedUrl = encodeURIComponent(file);
+                  return (
+                    <div key={index} className="message-file">
+                      <iframe 
+                        src={`https://docs.google.com/gview?url=${file}&embedded=true`} 
+                        width="100%" 
+                        height="200px" 
+                        style={{ border: 'none', borderRadius: '8px' }}
                       />
                     </div>
                   );
