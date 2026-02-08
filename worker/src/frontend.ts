@@ -191,67 +191,77 @@ export const FRONTEND_HTML = `
     }
 
     async function fetchMessages() {
-      const res = await fetch(API_BASE + '/api/messages');
-      const data = await res.json();
-      const container = document.getElementById('messageList');
-      if (!data.success) {
-        document.getElementById('error').style.display = 'block';
-        document.getElementById('error').textContent = data.error || '获取留言失败';
-        return;
-      }
-      if (data.data.length === 0) {
-        container.innerHTML = '<div class="empty">暂无留言，快来抢沙发！</div>';
-        return;
-      }
-      container.innerHTML = data.data.map(m => {
-        let filesHtml = '';
-        if (m.files && m.files.length > 0) {
-          filesHtml = '<div class="message-files">' + m.files.map(f => {
-            const isVideo = f.match(/\.(mp4|webm|mov|avi|mkv)$/i);
-            const isImage = f.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-            const isPdf = f.match(/\.(pdf)$/i);
-            const isDoc = f.match(/\.(doc|docx)$/i);
-            const isTxt = f.match(/\.(txt)$/i);
-            const isAudio = f.match(/\.(mp3|wav|ogg)$/i);
-            const url = getDownloadUrl(f);
-            
-            if (isVideo) {
-              return '<div class="message-file">' + 
-                '<video src="' + url + '" controls onclick="playVideo(this)"></video>' + 
-                '</div>';
-            } else if (isImage) {
-              return '<div class="message-file">' + 
-                '<img src="' + url + '" loading="lazy" onclick="showImageModal(this)" style="cursor: pointer;">' + 
-                '</div>';
-            } else if (isPdf) {
-              return '<div class="message-file">' + 
-                '<iframe src="' + url + '" width="100%" height="200px" style="border: none; border-radius: 8px;"></iframe>' + 
-                '</div>';
-            } else if (isTxt) {
-              return '<div class="message-file">' + 
-                '<iframe src="' + url + '" width="100%" height="200px" style="border: none; border-radius: 8px;"></iframe>' + 
-                '</div>';
-            } else if (isAudio) {
-              return '<div class="message-file">' + 
-                '<audio src="' + url + '" controls style="width: 100%;"></audio>' + 
-                '</div>';
-            } else if (isDoc) {
-              // 对于文档文件，使用 Google Docs Viewer
-              const encodedUrl = encodeURIComponent(url);
-              return '<div class="message-file">' + 
-                '<iframe src="https://docs.google.com/gview?url=' + url + '&embedded=true" width="100%" height="200px" style="border: none; border-radius: 8px;"></iframe>' + 
-                '</div>';
-            } else {
-              return '<div class="message-file">' + 
-                '<a href="' + url + '" target="_blank">📎 下载文件</a>' + '</div>';
-            }
-          }).join('') + '</div>';
+      try {
+        const res = await fetch(API_BASE + '/api/messages');
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
         }
-        return '<div class="message">' +
-          '<div class="message-header"><span class="message-name">👤 ' + m.name + '</span>' +
-          '<span class="message-time">' + new Date(m.createdAt).toLocaleString('zh-CN') + '</span></div>' +
-          '<div class="message-content">' + m.content + '</div>' + filesHtml + '</div>';
-      }).join('');
+        const data = await res.json();
+        const container = document.getElementById('messageList');
+        if (!data.success) {
+          document.getElementById('error').style.display = 'block';
+          document.getElementById('error').textContent = data.error || '获取留言失败';
+          return;
+        }
+        if (data.data.length === 0) {
+          container.innerHTML = '<div class="empty">暂无留言，快来抢沙发！</div>';
+          return;
+        }
+        container.innerHTML = data.data.map(m => {
+          let filesHtml = '';
+          if (m.files && m.files.length > 0) {
+            filesHtml = '<div class="message-files">' + m.files.map(f => {
+              const isVideo = f.match(/\.(mp4|webm|mov|avi|mkv)$/i);
+              const isImage = f.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+              const isPdf = f.match(/\.(pdf)$/i);
+              const isDoc = f.match(/\.(doc|docx)$/i);
+              const isTxt = f.match(/\.(txt)$/i);
+              const isAudio = f.match(/\.(mp3|wav|ogg)$/i);
+              const url = getDownloadUrl(f);
+              
+              if (isVideo) {
+                return '<div class="message-file">' + 
+                  '<video src="' + url + '" controls onclick="playVideo(this)"></video>' + 
+                  '</div>';
+              } else if (isImage) {
+                return '<div class="message-file">' + 
+                  '<img src="' + url + '" loading="lazy" onclick="showImageModal(this)" style="cursor: pointer;">' + 
+                  '</div>';
+              } else if (isPdf) {
+                return '<div class="message-file">' + 
+                  '<iframe src="' + url + '" width="100%" height="200px" style="border: none; border-radius: 8px;"></iframe>' + 
+                  '</div>';
+              } else if (isTxt) {
+                return '<div class="message-file">' + 
+                  '<iframe src="' + url + '" width="100%" height="200px" style="border: none; border-radius: 8px;"></iframe>' + 
+                  '</div>';
+              } else if (isAudio) {
+                return '<div class="message-file">' + 
+                  '<audio src="' + url + '" controls style="width: 100%;"></audio>' + 
+                  '</div>';
+              } else if (isDoc) {
+                // 对于文档文件，使用 Google Docs Viewer
+                const encodedUrl = encodeURIComponent(url);
+                return '<div class="message-file">' + 
+                  '<iframe src="https://docs.google.com/gview?url=' + url + '&embedded=true" width="100%" height="200px" style="border: none; border-radius: 8px;"></iframe>' + 
+                  '</div>';
+              } else {
+                return '<div class="message-file">' + 
+                  '<a href="' + url + '" target="_blank">📎 下载文件</a>' + '</div>';
+              }
+            }).join('') + '</div>';
+          }
+          return '<div class="message">' +
+            '<div class="message-header"><span class="message-name">👤 ' + m.name + '</span>' +
+            '<span class="message-time">' + new Date(m.createdAt).toLocaleString('zh-CN') + '</span></div>' +
+            '<div class="message-content">' + m.content + '</div>' + filesHtml + '</div>';
+        }).join('');
+      } catch (error) {
+        console.error('获取留言时发生错误:', error);
+        const container = document.getElementById('messageList');
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('error').textContent = '获取留言失败: ' + error.message;
+      }
     }
 
     document.getElementById('messageForm').addEventListener('submit', async (e) => {
