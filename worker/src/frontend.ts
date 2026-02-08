@@ -194,7 +194,7 @@ export const FRONTEND_HTML = `
       try {
         const res = await fetch(API_BASE + '/api/messages');
         if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
+          throw new Error('HTTP error! status: ' + res.status);
         }
         const data = await res.json();
         const container = document.getElementById('messageList');
