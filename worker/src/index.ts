@@ -62,10 +62,13 @@ app.post('/api/upload', async (c) => {
     })
 
     if (!authRes.ok) {
-      return c.json({ success: false, error: 'B2 授权失败' }, 500)
+      const errorText = await authRes.text()
+      console.error('B2 授权失败:', authRes.status, errorText)
+      return c.json({ success: false, error: 'B2 授权失败: ' + authRes.status }, 500)
     }
 
     const authData = await authRes.json()
+    console.log('B2 授权成功, bucketId:', c.env.B2_BUCKET_ID)
 
     // 获取上传 URL
     const bucketRes = await fetch(`https://api.backblazeb2.com/b2api/v3/b2_get_upload_url?bucketId=${c.env.B2_BUCKET_ID}`, {
@@ -75,10 +78,13 @@ app.post('/api/upload', async (c) => {
     })
 
     if (!bucketRes.ok) {
-      return c.json({ success: false, error: '获取上传 URL 失败' }, 500)
+      const errorText = await bucketRes.text()
+      console.error('获取上传 URL 失败:', bucketRes.status, errorText)
+      return c.json({ success: false, error: '获取上传 URL 失败: ' + bucketRes.status }, 500)
     }
 
     const bucketData = await bucketRes.json()
+    console.log('获取上传 URL 成功:', bucketData.uploadUrl)
 
     // 生成唯一文件名
     const ext = file.name.split('.').pop() || ''
@@ -100,7 +106,7 @@ app.post('/api/upload', async (c) => {
     if (!uploadRes.ok) {
       const errorText = await uploadRes.text()
       console.error('B2 上传失败:', uploadRes.status, errorText)
-      return c.json({ success: false, error: `上传失败: ${uploadRes.status}` }, 500)
+      return c.json({ success: false, error: `上传失败: ${uploadRes.status} - ${errorText.substring(0, 200)}` }, 500)
     }
 
     // 返回文件访问 URL (使用公开 URL)
