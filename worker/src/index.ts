@@ -24,7 +24,87 @@ app.use('/*', cors({
   allowHeaders: ['Content-Type'],
 }))
 
-// Backblaze B2 授权
+// 上传文件到 B2
+app.post('/api/upload', async (c) => {
+  try {
+    const formData = await c.req.formData()
+    const file = formData.get('file')
+
+    if (!file || !(file instanceof File)) {
+      return c.json({ success: false, error: '没有文件' }, 400)
+    }
+
+    const auth = c.env.B2_AUTH
+    if (!auth) {
+      return c.json({ success: false, error: '未配置 B2 授权' }, 500)
+    }
+
+    // 解析 Base64 编码的授权信息
+    const decoded = atob(auth)
+    const [keyID, applicationKey] = decoded.split(':')
+
+    // 获取 Authorization Token
+    const authRes = await fetch('https://api.backblazeb2.com/b2api/v3/b2_authorize_account', {
+      headers: {
+        'Authorization': 'Basic ' + btoa(keyID + ':' + applicationKey)
+      }
+    })
+
+    if (!authRes.ok) {
+      return c.json({ success: false, error: 'B2 授权失败' }, 500)
+    }
+
+    const authData = await authRes.json()
+
+    // 获取上传 URL
+    const bucketRes = await fetch(`https://api.backblazeb2.com/b2api/v3/b2_get_upload_url?bucketId=ALL`, {
+      headers: {
+        'Authorization': authData.authorizationToken
+      }
+    })
+
+    if (!bucketRes.ok) {
+      return c.json({ success: false, error: '获取上传 URL 失败' }, 500)
+    }
+
+    const bucketData = await bucketRes.json()
+
+    // 生成唯一文件名
+    const ext = file.name.split('.').pop() || ''
+    const fileName = `${Date.now()}-${crypto.randomUUID()}.${ext}`
+    const fileData = await file.arrayBuffer()
+
+    // 上传到 B2
+    const uploadRes = await fetch(bucketData.uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': bucketData.authorizationToken,
+        'X-Bz-File-Name': fileName,
+        'Content-Type': file.type,
+        'X-Bz-Content-Sha1': 'do_not_verify'
+      },
+      body: fileData
+    })
+
+    if (!uploadRes.ok) {
+      return c.json({ success: false, error: '上传失败' }, 500)
+    }
+
+    // 返回文件访问 URL (使用公开 URL)
+    const fileUrl = `${authData.downloadUrl}/file/guestbook/${fileName}`
+
+    return c.json({
+      success: true,
+      data: {
+        url: fileUrl,
+        key: fileName
+      }
+    })
+  } catch (error) {
+    console.error('上传错误:', error)
+    return c.json({ success: false, error: '上传失败' }, 500)
+  }
+})
 app.get('/api/b2-auth', async (c) => {
   try {
     const auth = c.env.B2_AUTH
