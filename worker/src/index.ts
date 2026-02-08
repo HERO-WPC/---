@@ -89,7 +89,7 @@ app.post('/api/upload', async (c) => {
       const uploadRes = await fetch(`https://api.github.com/repos/${githubRepo}/contents/${filePath}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${githubToken}`,
+          'Authorization': `token ${githubToken}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -103,7 +103,13 @@ app.post('/api/upload', async (c) => {
         const uploadData = await uploadRes.text(); // 获取原始响应文本
         console.error('GitHub 上传失败:', uploadRes.status, uploadData)
         // 返回更具体的错误信息
-        return c.json({ success: false, error: `GitHub上传失败: HTTP ${uploadRes.status}` }, 500)
+        let errorMsg = `GitHub上传失败: HTTP ${uploadRes.status}`;
+        if (uploadRes.status === 403) {
+          errorMsg += " (权限被拒绝，请检查您的 GitHub Token 权限和仓库访问权限)";
+        } else if (uploadRes.status === 404) {
+          errorMsg += " (仓库或分支未找到，请检查仓库名称)";
+        }
+        return c.json({ success: false, error: errorMsg }, 500)
       }
       const uploadData = await uploadRes.json();
 

@@ -1,0 +1,17 @@
+{
+  "name": "herochat-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Pages Function for herochat",
+  "main": "_worker.js",
+  "scripts": {
+    "deploy": "wrangler pages deploy"
+  },
+  "dependencies": {
+    "itty-router": "^2.6.6"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
+ 

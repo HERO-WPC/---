@@ -1,0 +1,78 @@
+/* 应用自定义字体和全局样式 */
+body {
+    font-family: 'Noto Sans SC', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: var(--card-background-color);
+}
+
+/* 容器和卡片样式 */
+main.container {
+    max-width: 800px; /* 限制最大宽度 */
+    padding: 2rem;
+}
+
+article {
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-box-shadow);
+    overflow: hidden; /* 防止子元素溢出圆角 */
+    padding: 2rem;
+}
+
+/* 表单元素样式 */
+textarea {
+    min-height: 120px; /* 让文本框更高一点 */
+    resize: vertical; /* 只允许垂直调整大小 */
+}
+
+/* 让图标和标题对齐 */
+h1 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem; /* 图标和文字之间的间距 */
+}
+
+.icon {
+    color: var(--primary); /* 使用主题色 */
+}
+
+/* 按钮样式 */
+#submit-btn {
+    width: 100%;
+    transition: background-color 0.3s ease; /* 平滑的过渡效果 */
+}
+
+/* 消息反馈区域样式 */
+.response {
+    padding: 1rem;
+    margin-top: 1rem;
+    border-radius: var(--border-radius);
+    text-align: center;
+    font-weight: bold;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* 成功的消息样式 (绿色) */
+.response.success {
+    background-color: hsl(140, 60%, 90%);
+    color: hsl(140, 80%, 25%);
+    border: 1px solid hsl(140, 60%, 80%);
+}
+
+/* 失败的消息样式 (红色) */
+.response.error {
+    background-color: hsl(0, 60%, 90%);
+    color: hsl(0, 80%, 35%);
+    border: 1px solid hsl(0, 60%, 80%);
+}
+
+/* 显示动画 */
+.response.show {
+    display: block !important;
+    opacity: 1;
+    transform: translateY(0);
+}

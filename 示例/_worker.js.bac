@@ -1,0 +1,216 @@
+/**
+ * _worker.js
+ *
+ * 这是Cloudflare Worker的主入口文件，负责处理留言提交和获取。
+ * 使用 itty-router 来管理 API 路由。
+ */
+
+import { Router } from 'itty-router';
+
+// 初始化 itty-router
+const router = Router();
+
+// --- 路由 POST /api/submit ---
+// 处理用户提交留言和（可选）图片上传
+router.post('/api/submit', async (request, env) => {
+    try {
+        // 解析请求体中的表单数据
+        const formData = await request.formData();
+        const nickname = formData.get('nickname'); // 获取昵称
+        const message = formData.get('message');
+        const imageData = formData.get('imageData'); // 前端传来的 Base64 Data URL
+        const isPublic = formData.get('isPublic') === 'true'; // 将字符串 'true' 转换为布尔值 true
+
+        // 验证基本输入：昵称和消息是必需的
+        if (!nickname || typeof nickname !== 'string' || nickname.trim() === '' || !message) {
+            return new Response(JSON.stringify({ success: false, error: 'Nickname and message are required.' }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
+        let imageUrl = ''; // 用于存储上传图片后的 URL
+        if (imageData) {
+            console.log('Image data received. Attempting to upload to GitHub.');
+
+            // 解析 Base64 Data URL
+            const parts = imageData.split(',');
+            if (parts.length < 2) {
+                console.error('Invalid image data format:', imageData);
+                throw new Error('Invalid image data format.');
+            }
+            const mimeTypePart = parts[0].split(';')[0];
+            const mimeType = mimeTypePart.split(':')[1]; // 例如 'image/jpeg'
+            const base64Content = parts[1]; // 纯 Base64 内容，用于 GitHub API
+
+            // --- 核心修改部分：生成包含昵称的文件名 ---
+            // 清理昵称：去除首尾空格，替换特殊字符为下划线，并限制长度。
+            const cleanedNickname = nickname.trim().replace(/[^a-zA-Z0-9_-一-龥]/g, '_').substring(0, 50); // 增加支持中文
+            const timestamp = Date.now(); // 获取当前时间戳
+            const fileExtension = mimeType.split('/')[1] || 'png'; // 提取文件扩展名，默认 png
+
+            // 新的文件名格式：昵称-时间戳.扩展名
+            const fileName = `uploads/${cleanedNickname}-${timestamp}.${fileExtension}`;
+            // --- 核心修改部分结束 ---
+
+            // GitHub 仓库配置
+            const owner = 'HERO-WPC'; // 替换为你的 GitHub 用户名
+            const repo = 'herochat'; // 替换为你的 GitHub 仓库名
+            const githubApiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${fileName}`;
+
+            // 调用 GitHub API 上传文件 (需要 GITHUB_TOKEN 环境变量)
+            const githubResponse = await fetch(githubApiUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${env.GITHUB_TOKEN}`, // 使用 Cloudflare Pages 环境变量
+                    'Accept': 'application/vnd.github.v3+json', // GitHub API 版本
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'cloudflare-herochat-app' // GitHub API 要求 User-Agent
+                },
+                body: JSON.stringify({
+                    message: `Add image: ${fileName} by ${nickname}`, // Git commit 消息，包含昵称
+                    content: base64Content, // Base64 编码的图片内容
+                    branch: 'main' // 假设你的主分支是 main
+                })
+            });
+
+            const githubResult = await githubResponse.json(); // 解析 GitHub API 响应
+
+            if (githubResponse.ok) {
+                // 如果上传成功，构建图片的公开访问 URL
+                // Cloudflare Pages 会将 GitHub 仓库的内容作为静态资产提供
+                // 动态获取当前 Pages 部署的域名，更健壮
+                const pagesDomain = request.url.split('/')[2];
+                imageUrl = `https://${pagesDomain}/${fileName}`; // 假设 fileName 已经包含了 uploads/ 路径
+                console.log(`Image uploaded to GitHub. Public URL: ${imageUrl}`);
+            } else {
+                console.error('GitHub API upload failed:', githubResult);
+                // 抛出错误以触发外部 catch 块
+                throw new Error(`图片上传到 GitHub 失败: ${githubResult.message || '未知错误'}`);
+            }
+        }
+
+        // --- 保存留言到 KV 存储 ---
+        // 确保 'DB' KV 命名空间已经在 Cloudflare Pages 项目中绑定
+        const id = crypto.randomUUID(); // 生成唯一 ID
+        const timestamp = new Date().toISOString(); // 获取 ISO 格式 UTC 时间戳
+
+        const messageData = { nickname, message, imageUrl, timestamp, isPublic, id };
+        await env.DB.put(id, JSON.stringify(messageData)); // 将数据 JSON 序列化并存储到 KV
+
+        console.log(`Message ${id} saved to KV.`);
+
+        // 返回成功响应
+        return new Response(JSON.stringify({ success: true, messageId: id }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
+
+    } catch (error) {
+        console.error('Error in /api/submit:', error); // 记录详细错误
+        // 返回一个通用的错误响应给客户端，不暴露内部错误细节
+        return new Response(JSON.stringify({ success: false, error: 'Internal server error or image upload failed.' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
+});
+
+// --- 路由 GET /api/messages (获取留言列表) ---
+// 从 KV 存储中检索所有留言
+router.get('/api/messages', async (request, env) => {
+    try {
+        const list = await env.DB.list(); // 获取所有 KV 键的列表
+        const messages = [];
+
+        // 遍历所有键，获取对应的值
+        for (const key of list.keys) {
+            const value = await env.DB.get(key.name);
+            if (value) {
+                messages.push(JSON.parse(value)); // 解析 JSON 字符串并添加到数组
+            }
+        }
+
+        // 根据时间戳降序排序，最新的留言在前
+        messages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+        console.log(`Retrieved ${messages.length} messages from KV.`);
+
+        // 返回留言列表
+        return new Response(JSON.stringify({ messages: messages }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    } catch (error) {
+        console.error('Error in /api/messages:', error); // 记录详细错误
+        // 返回通用的错误响应
+        return new Response(JSON.stringify({ success: false, error: 'Failed to retrieve messages.' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
+});
+
+// --- Worker 入口点 ---
+export default {
+    async fetch(request, env, ctx) {
+        console.log('--- Worker received request ---');
+        console.log('Request URL:', request.url);
+        console.log('Request Method:', request.method);
+
+        let response;
+
+        try {
+            // 尝试使用 itty-router 处理请求。
+            // 如果没有匹配的路由，itty-router 默认返回 undefined。
+            response = await router.handle(request, env, ctx);
+            console.log('Router custom handling done. Raw response:', response);
+
+        } catch (routerError) {
+            console.error('CRITICAL ERROR: Exception caught during router.handle():', routerError);
+            console.error('Router handle error stack:', routerError.stack);
+            return new Response(`Error handling request by router: ${routerError.message}`, {
+                status: 500,
+                headers: { 'Content-Type': 'text/plain' },
+            });
+        }
+
+        // 如果 itty-router 成功处理了请求 (返回了一个 Response 对象)，则直接返回它。
+        if (response && response instanceof Response) {
+            console.log('Router successfully matched and returned a response. Status:', response.status);
+            return response;
+        }
+
+        // 如果 itty-router 没有匹配到任何路由 (即 response 是 undefined)，
+        // 则尝试从 Cloudflare Pages 的静态资产中查找文件。
+        console.log('Router did not match. Attempting to serve static asset...');
+        try {
+            // 使用 env.ASSETS.fetch() 来获取部署在 Pages 上的静态文件。
+            // env.ASSETS 是 Cloudflare Pages Functions 自动提供的绑定。
+            const assetResponse = await env.ASSETS.fetch(request);
+            console.log('env.ASSETS.fetch raw result:', assetResponse);
+
+            // 严格的安全检查：确保 assetResponse 是一个有效的 Response 对象
+            if (assetResponse && assetResponse instanceof Response) {
+                console.log('env.ASSETS.fetch completed. Asset response status:', assetResponse.status);
+                // 直接返回资产响应，无论其状态码是 200 还是 404 (如果静态文件不存在的话)
+                return assetResponse;
+            } else {
+                // 如果 assetResponse 不是一个有效的 Response 对象
+                console.error('CRITICAL ERROR: env.ASSETS.fetch did not return a valid Response object. Type:', typeof assetResponse, 'Value:', assetResponse);
+                return new Response(`Error retrieving static asset: Unexpected fetch result. Value: ${assetResponse}`, {
+                    status: 500,
+                    headers: { 'Content-Type': 'text/plain' },
+                });
+            }
+        } catch (assetError) {
+            // 捕获在 env.ASSETS.fetch 过程中可能发生的任何错误
+            console.error('CRITICAL ERROR: Exception caught during env.ASSETS.fetch:', assetError);
+            console.error('Asset fetch error stack:', assetError.stack);
+            return new Response(`Error serving static asset. Please check Worker logs. Details: ${assetError.message}`, {
+                status: 500,
+                headers: { 'Content-Type': 'text/plain' },
+            });
+        }
+    },
+};
