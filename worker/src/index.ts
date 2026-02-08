@@ -15,6 +15,15 @@ interface Message {
   createdAt: string
 }
 
+// 生成 UUID
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
 const app = new Hono<Env>()
 
 // CORS 配置
@@ -71,7 +80,7 @@ app.post('/api/upload', async (c) => {
 
     // 生成唯一文件名
     const ext = file.name.split('.').pop() || ''
-    const fileName = `${Date.now()}-${crypto.randomUUID()}.${ext}`
+    const fileName = `${Date.now()}-${generateUUID()}.${ext}`
     const fileData = await file.arrayBuffer()
 
     // 上传到 B2
@@ -184,7 +193,7 @@ app.post('/api/messages', async (c) => {
       return c.json({ success: false, error: '内容和昵称不能为空' }, 400)
     }
 
-    const id = crypto.randomUUID()
+    const id = generateUUID()
     const message: Message = {
       id,
       content,
