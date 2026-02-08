@@ -117,11 +117,6 @@ export const FRONTEND_HTML = `
     let files = [];
     let previews = [];
     
-    // Backblaze B2 配置
-    const B2_CONFIG = {
-      bucketName: 'my-upload-files'
-    };
-
     document.getElementById('fileInput').addEventListener('change', (e) => {
       const selected = Array.from(e.target.files);
       if (selected.length + files.length > 5) {
@@ -195,9 +190,9 @@ export const FRONTEND_HTML = `
       return fileName;
     }
 
-    // 获取文件下载链接
-    function getDownloadUrl(fileName) {
-      return 'https://f004.backblazeb2.com/file/' + B2_CONFIG.bucketName + '/' + fileName;
+    // 获取文件下载链接（0x0.st 直接返回 URL）
+    function getDownloadUrl(fileNameOrUrl) {
+      return fileNameOrUrl;
     }
 
     async function fetchMessages() {

@@ -35,7 +35,7 @@ app.use('/*', cors({
   allowHeaders: ['Content-Type'],
 }))
 
-// 上传文件到 B2 (使用 S3 兼容 API)
+// 上传文件到 0x0.st（免费匿名文件托管，最大 1GB）
 app.post('/api/upload', async (c) => {
   try {
     const formData = await c.req.formData()
@@ -45,49 +45,26 @@ app.post('/api/upload', async (c) => {
       return c.json({ success: false, error: '没有文件' }, 400)
     }
 
-    const B2_AUTH = c.env.B2_AUTH
-    const B2_BUCKET_NAME = c.env.B2_BUCKET_NAME
-    if (!B2_AUTH || !B2_BUCKET_NAME) {
-      return c.json({ success: false, error: '未配置 B2' }, 500)
-    }
-
-    // 解析 Base64 编码的授权信息
-    const decoded = atob(B2_AUTH)
-    const [keyID, applicationKey] = decoded.split(':')
-
-    // 获取 Authorization Token
-    const authRes = await fetch('https://api.backblazeb2.com/b2api/v3/b2_authorize_account', {
-      headers: { 'Authorization': 'Basic ' + btoa(keyID + ':' + applicationKey) }
-    })
-
-    if (!authRes.ok) {
-      return c.json({ success: false, error: 'B2 授权失败' }, 500)
-    }
-
-    const authData = await authRes.json()
-    const fileName = `${Date.now()}-${generateUUID()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
     const fileData = await file.arrayBuffer()
 
-    // 使用 S3 兼容 API 直接上传
-    const uploadRes = await fetch(`https://s3.us-west-004.backblazeb2.com/${B2_BUCKET_NAME}/${fileName}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': authData.authorizationToken,
-        'Content-Type': file.type || 'application/octet-stream',
-        'X-Bz-Content-Sha1': 'do_not_verify'
-      },
-      body: fileData
+    // 上传到 0x0.st
+    const res = await fetch('https://0x0.st', {
+      method: 'POST',
+      body: new URLSearchParams({
+        file: new Blob([fileData], { type: file.type }),
+        name: file.name
+      })
     })
 
-    if (!uploadRes.ok) {
-      const errorText = await uploadRes.text()
-      return c.json({ success: false, error: `上传失败: ${uploadRes.status}` }, 500)
+    if (!res.ok) {
+      const errorText = await res.text()
+      console.error('上传失败:', errorText)
+      return c.json({ success: false, error: '上传失败' }, 500)
     }
 
-    // 返回文件访问 URL
-    const fileUrl = `https://f004.backblazeb2.com/file/${B2_BUCKET_NAME}/${fileName}`
+    const fileUrl = await res.text()
 
-    return c.json({ success: true, data: { url: fileUrl, key: fileName } })
+    return c.json({ success: true, data: { url: fileUrl.trim(), key: file.name } })
   } catch (error) {
     console.error('上传错误:', error)
     return c.json({ success: false, error: '上传失败' }, 500)

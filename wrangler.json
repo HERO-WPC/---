@@ -9,8 +9,9 @@
     }
   ],
   "vars": {
-    "B2_AUTH": "MDA0OGM2Mjc1ZDc0MTYzMDAwMDAwMDAwMjpLMDA0RUljenRMRjg4Wk1qTlBKQUFsWlZtRVVGYkUw",
-    "B2_BUCKET_ID": "688c66b2b7753db794c10613",
-    "B2_BUCKET_NAME": "my-upload-files"
+    "B2_AUTH": "",
+    "B2_BUCKET_ID": "",
+    "B2_BUCKET_NAME": "",
+    "IMGBB_API_KEY": "你的ImgBB_API_Key"
   }
 }
