@@ -5,7 +5,7 @@
 }
 
 .message {
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #444;
   padding-bottom: 20px;
 }
 
@@ -23,16 +23,16 @@
 
 .message-name {
   font-weight: 600;
-  color: #333;
+  color: #e0e0e0;
 }
 
 .message-time {
-  color: #999;
+  color: #aaa;
   font-size: 14px;
 }
 
 .message-content {
-  color: #555;
+  color: #ccc;
   line-height: 1.6;
   white-space: pre-wrap;
 }
@@ -48,8 +48,9 @@
   max-width: 200px;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  background: #f5f5f5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  background: #333;
+  border: 1px solid #444;
 }
 
 .message-file img,

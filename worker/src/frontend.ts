@@ -9,55 +9,62 @@ export const FRONTEND_HTML = `
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
       min-height: 100vh;
       padding: 20px;
+      color: #e0e0e0;
     }
     .container { max-width: 800px; margin: 0 auto; }
     h1 {
-      color: white; text-align: center; margin-bottom: 30px;
-      font-size: 2.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      color: #e0e0e0; text-align: center; margin-bottom: 30px;
+      font-size: 2.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     }
     .card {
-      background: white; border-radius: 12px; padding: 24px;
-      margin-bottom: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      background: #252525; border-radius: 12px; padding: 24px;
+      margin-bottom: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      border: 1px solid #444;
     }
     .form-group { margin-bottom: 16px; }
-    label { display: block; margin-bottom: 6px; color: #333; font-weight: 500; }
+    label { display: block; margin-bottom: 6px; color: #e0e0e0; font-weight: 500; }
     input, textarea {
-      width: 100%; padding: 12px; border: 2px solid #e0e0e0;
+      width: 100%; padding: 12px; border: 2px solid #444;
       border-radius: 8px; font-size: 16px; transition: border-color 0.3s;
+      background: #333;
+      color: #e0e0e0;
     }
     input:focus, textarea:focus { outline: none; border-color: #667eea; }
     textarea { resize: vertical; min-height: 100px; }
     .file-label {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 12px 20px; background: #f0f0f0; border-radius: 8px;
+      padding: 12px 20px; background: #333; border-radius: 8px;
       cursor: pointer; transition: background 0.3s;
+      color: #e0e0e0;
+      border: 1px solid #444;
     }
-    .file-label:hover { background: #e0e0e0; }
+    .file-label:hover { background: #444; }
     .btn {
       padding: 12px 24px; border: none; border-radius: 8px;
       font-size: 16px; font-weight: 500; cursor: pointer;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white; transition: transform 0.2s, box-shadow 0.2s;
     }
-    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
     .btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .message {
-      border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px;
+      border-bottom: 1px solid #444; padding-bottom: 20px; margin-bottom: 20px;
     }
     .message:last-child { border-bottom: none; margin-bottom: 0; }
     .message-header {
       display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
     }
-    .message-name { font-weight: 600; color: #333; }
-    .message-time { color: #999; font-size: 14px; }
-    .message-content { color: #555; line-height: 1.6; white-space: pre-wrap; }
+    .message-name { font-weight: 600; color: #e0e0e0; }
+    .message-time { color: #aaa; font-size: 14px; }
+    .message-content { color: #ccc; line-height: 1.6; white-space: pre-wrap; }
     .message-files { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
     .message-file {
       max-width: 250px; border-radius: 8px; overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: #f5f5f5;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3); background: #333;
+      border: 1px solid #444;
     }
     .message-file img, .message-file video {
       width: 100%; height: auto; display: block; max-height: 250px; object-fit: cover;
@@ -76,10 +83,10 @@ export const FRONTEND_HTML = `
       border-radius: 50%; background: #ff4757; color: white; border: none;
       cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px;
     }
-    .loading { text-align: center; padding: 20px; color: #666; }
+    .loading { text-align: center; padding: 20px; color: #aaa; }
     .error { background: #ff4757; color: white; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
-    .empty { text-align: center; padding: 40px; color: #999; }
-    .info { background: #2196F3; color: white; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+    .empty { text-align: center; padding: 40px; color: #aaa; }
+    .info { background: #1e88e5; color: white; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
   </style>
 </head>
 <body>

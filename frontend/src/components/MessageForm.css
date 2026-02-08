@@ -5,7 +5,7 @@
 label {
   display: block;
   margin-bottom: 6px;
-  color: #333;
+  color: #e0e0e0;
   font-weight: 500;
 }
 
@@ -13,10 +13,12 @@ input[type="text"],
 textarea {
   width: 100%;
   padding: 12px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid #444;
   border-radius: 8px;
   font-size: 16px;
   transition: border-color 0.3s;
+  background: #333;
+  color: #e0e0e0;
 }
 
 input[type="text"]:focus,
@@ -39,14 +41,16 @@ textarea {
   align-items: center;
   gap: 8px;
   padding: 12px 20px;
-  background: #f0f0f0;
+  background: #333;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.3s;
+  color: #e0e0e0;
+  border: 1px solid #444;
 }
 
 .file-label:hover {
-  background: #e0e0e0;
+  background: #444;
 }
 
 .btn {
@@ -61,7 +65,7 @@ textarea {
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .btn-primary {

@@ -7,9 +7,10 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   min-height: 100vh;
   padding: 20px;
+  color: #e0e0e0;
 }
 
 .container {
@@ -18,19 +19,20 @@ body {
 }
 
 h1 {
-  color: white;
+  color: #e0e0e0;
   text-align: center;
   margin-bottom: 30px;
   font-size: 2.5rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .card {
-  background: white;
+  background: #252525;
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid #444;
 }
 
 .form-group {
@@ -40,7 +42,7 @@ h1 {
 label {
   display: block;
   margin-bottom: 6px;
-  color: #333;
+  color: #e0e0e0;
   font-weight: 500;
 }
 
@@ -48,10 +50,12 @@ input[type="text"],
 textarea {
   width: 100%;
   padding: 12px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid #444;
   border-radius: 8px;
   font-size: 16px;
   transition: border-color 0.3s;
+  background: #333;
+  color: #e0e0e0;
 }
 
 input[type="text"]:focus,
@@ -74,14 +78,16 @@ textarea {
   align-items: center;
   gap: 8px;
   padding: 12px 20px;
-  background: #f0f0f0;
+  background: #333;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.3s;
+  color: #e0e0e0;
+  border: 1px solid #444;
 }
 
 .file-label:hover {
-  background: #e0e0e0;
+  background: #444;
 }
 
 .btn {
@@ -96,7 +102,7 @@ textarea {
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .btn-primary {
@@ -111,7 +117,7 @@ textarea {
 }
 
 .message {
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #444;
   padding-bottom: 20px;
   margin-bottom: 20px;
 }
@@ -130,16 +136,16 @@ textarea {
 
 .message-name {
   font-weight: 600;
-  color: #333;
+  color: #e0e0e0;
 }
 
 .message-time {
-  color: #999;
+  color: #aaa;
   font-size: 14px;
 }
 
 .message-content {
-  color: #555;
+  color: #ccc;
   line-height: 1.6;
   white-space: pre-wrap;
 }
@@ -155,7 +161,9 @@ textarea {
   max-width: 200px;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  background: #333;
+  border: 1px solid #444;
 }
 
 .message-file img,
@@ -206,7 +214,7 @@ textarea {
 .loading {
   text-align: center;
   padding: 20px;
-  color: #666;
+  color: #aaa;
 }
 
 .error {
@@ -220,5 +228,5 @@ textarea {
 .empty {
   text-align: center;
   padding: 40px;
-  color: #999;
+  color: #aaa;
 }
