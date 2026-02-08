@@ -50,7 +50,7 @@ function App() {
 
   return (
     <div className="container">
-      <h1>📝 留言板</h1>
+      <h1>HERO_WPC留言板</h1>
       
       {error && <div className="error">{error}</div>}
       
