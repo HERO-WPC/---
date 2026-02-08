@@ -1,0 +1,8 @@
+{
+  "name": "guestbook",
+  "version": "1.0.0",
+  "description": "Cloudflare Guestbook",
+  "scripts": {
+    "deploy": "cd worker && npm install && npx wrangler deploy"
+  }
+}
