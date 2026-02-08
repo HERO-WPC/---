@@ -11,6 +11,12 @@ interface FileUpload {
   key: string
 }
 
+interface UploadResult {
+  url: string
+  key: string
+  error?: string
+}
+
 function MessageForm({ onMessagePosted, apiBase }: Props) {
   const [name, setName] = useState('')
   const [content, setContent] = useState('')
@@ -18,6 +24,7 @@ function MessageForm({ onMessagePosted, apiBase }: Props) {
   const [previews, setPreviews] = useState<FileUpload[]>([])
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,7 +48,7 @@ function MessageForm({ onMessagePosted, apiBase }: Props) {
     setPreviews(prev => prev.filter((_, i) => i !== index))
   }
 
-  const uploadFile = async (file: File): Promise<FileUpload | null> => {
+  const uploadFile = async (file: File): Promise<UploadResult | null> => {
     const formData = new FormData()
     formData.append('file', file)
 
@@ -54,9 +61,9 @@ function MessageForm({ onMessagePosted, apiBase }: Props) {
       if (data.success) {
         return data.data
       }
-      return null
-    } catch {
-      return null
+      return { url: '', key: '', error: data.error || '上传失败' }
+    } catch (error) {
+      return { url: '', key: '', error: '网络错误' }
     }
   }
 
@@ -68,14 +75,19 @@ function MessageForm({ onMessagePosted, apiBase }: Props) {
     }
 
     setSubmitting(true)
+    setUploadError(null)
 
     try {
       // 先上传所有文件
       const uploadedFiles: string[] = []
       for (const file of files) {
         const result = await uploadFile(file)
-        if (result) {
+        if (result?.url) {
           uploadedFiles.push(result.url)
+        } else if (result?.error) {
+          setUploadError(`文件 "${file.name}" 上传失败: ${result.error}`)
+          setSubmitting(false)
+          return
         }
       }
 
@@ -167,6 +179,12 @@ function MessageForm({ onMessagePosted, apiBase }: Props) {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {uploadError && (
+        <div className="error-message" style={{ color: '#dc3545', marginBottom: '10px', padding: '10px', backgroundColor: '#f8d7da', borderRadius: '4px' }}>
+          ⚠️ {uploadError}
         </div>
       )}
 
