@@ -103,7 +103,7 @@ app.post('/api/upload', async (c) => {
       }
     })
 
-    const workerUrl = c.env.WORKER_URL || `https://${c.req.header('host')}`
+    const workerUrl = `https://${c.req.header('host')}`
     const url = `${workerUrl}/files/${key}`
 
     return c.json({ success: true, data: { url, key } })
