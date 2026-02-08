@@ -4,7 +4,7 @@ import MessageList from './components/MessageList'
 import './App.css'
 
 // 配置你的 Worker URL (生产环境使用相对路径)
-const API_BASE = import.meta.env.PROD ? '' : (import.meta.env.VITE_API_URL || 'http://localhost:8787')
+const API_BASE = import.meta.env.PROD ? '' : (import.meta.env.VITE_API_URL || 'https://cloudflare-guestbook2.wpc20111128.workers.dev')
 
 interface Message {
   id: string

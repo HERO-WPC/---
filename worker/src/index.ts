@@ -61,60 +61,58 @@ app.post('/api/upload', async (c) => {
         return c.json({ success: false, error: '文件太大，使用 GitHub 上传时最大支持 25MB' }, 400)
       }
 
-      const fileData = await file.arrayBuffer()
-      // 正确的 base64 编码方式
-      const fileBase64 = btoa(
-        new Uint8Array(fileData)
-          .reduce((data, byte) => data + String.fromCharCode(byte), '')
-      )
+      // 将文件转换为 ArrayBuffer
+      const fileBuffer = await file.arrayBuffer();
+      // 将 ArrayBuffer 转换为 Base64 字符串
+      const bytes = new Uint8Array(fileBuffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const fileBase64 = btoa(binary);
+
+      // 从 GITHUB_REPO 环境变量中提取 owner 和 repo
+      const [owner, repo] = githubRepo.split('/');
+
+      if (!owner || !repo) {
+        return c.json({ success: false, error: 'GITHUB_REPO 格式错误，应为 username/repository' }, 500)
+      }
+
+      const githubBranch = c.env.GITHUB_BRANCH || 'main';
       
-      const githubBranch = c.env.GITHUB_BRANCH || 'main'
-      const githubPath = c.env.GITHUB_PATH || 'uploads/'
+      // 生成唯一文件名（参考示例代码格式）
+      const timestamp = Date.now();
+      const fileExtension = file.name.split('.').pop() || 'file';
+      const cleanedNickname = 'guest'; // 可以从请求中获取上传者信息，这里使用默认名称
+      const fileName = `uploads/${cleanedNickname}-${timestamp}.${fileExtension}`;
+      
+      const githubApiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${fileName}`;
 
-      // 生成唯一文件名
-      const fileId = generateUUID()
-      const fileName = fileId + '.' + file.name.split('.').pop()
-      const filePath = githubPath + fileName
-
-      // 添加调试日志
-      console.log('GitHub 上传信息:', {
-        repo: githubRepo,
-        filePath: filePath,
-        fileSize: file.size,
-        fileName: file.name,
-        branch: githubBranch
-      });
-
-      // 上传到 GitHub
-      const uploadRes = await fetch(`https://api.github.com/repos/${githubRepo}/contents/${filePath}`, {
+      // 上传到 GitHub（使用示例中的方法）
+      const githubResponse = await fetch(githubApiUrl, {
         method: 'PUT',
         headers: {
           'Authorization': `token ${githubToken}`,
-          'Content-Type': 'application/json'
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'cloudflare-guestbook-app'
         },
         body: JSON.stringify({
-          message: `Upload ${file.name} via guestbook`,
+          message: `Add file: ${fileName} via guestbook`,
           content: fileBase64,
           branch: githubBranch
         })
-      })
+      });
 
-      if (!uploadRes.ok) {
-        const uploadData = await uploadRes.text(); // 获取原始响应文本
-        console.error('GitHub 上传失败:', uploadRes.status, uploadData)
-        // 返回更具体的错误信息
-        let errorMsg = `GitHub上传失败: HTTP ${uploadRes.status}`;
-        if (uploadRes.status === 403) {
-          errorMsg += " (权限被拒绝，请检查您的 GitHub Token 权限和仓库访问权限)";
-        } else if (uploadRes.status === 404) {
-          errorMsg += " (仓库或分支未找到，请检查仓库名称)";
-        }
-        return c.json({ success: false, error: errorMsg }, 500)
+      const githubResult = await githubResponse.json();
+
+      if (!githubResponse.ok) {
+        console.error('GitHub API 上传失败:', githubResult);
+        return c.json({ success: false, error: `GitHub上传失败: ${githubResult.message || '未知错误'}` }, 500);
       }
-      const uploadData = await uploadRes.json();
 
       // 返回 GitHub raw 链接
-      const fileUrl = `https://raw.githubusercontent.com/${githubRepo}/${githubBranch}/${filePath}`
+      const fileUrl = `https://raw.githubusercontent.com/${githubRepo}/${githubBranch}/${fileName}`;
       
       return c.json({ success: true, data: { url: fileUrl, key: fileName } })
     } else {
