@@ -118,6 +118,12 @@ export const FRONTEND_HTML = `
         <div class="loading">加载中...</div>
       </div>
     </div>
+    
+    <!-- 图片模态框 -->
+    <div id="imageModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); text-align: center;">
+      <span class="close" onclick="closeImageModal()" style="position: absolute; top: 20px; right: 35px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
+      <img id="modalImage" class="modal-content" style="margin: auto; display: block; max-width: 90%; max-height: 90%; margin-top: 5%;">
+    </div>
   </div>
   <script>
     const API_BASE = window.location.origin;
@@ -204,10 +210,18 @@ export const FRONTEND_HTML = `
             const isVideo = f.match(/\.(mp4|webm|mov|avi|mkv)$/i);
             const isImage = f.match(/\.(jpg|jpeg|png|gif|webp)$/i);
             const url = getDownloadUrl(f);
-            return '<div class="message-file">' + 
-              (isVideo ? '<video src="' + url + '" controls></video>' : 
-               isImage ? '<img src="' + url + '" loading="lazy">' : 
-               '<a href="' + url + '" target="_blank">📎 下载文件</a>') + '</div>';
+            if (isVideo) {
+              return '<div class="message-file">' + 
+                '<video src="' + url + '" controls onclick="playVideo(this)"></video>' + 
+                '</div>';
+            } else if (isImage) {
+              return '<div class="message-file">' + 
+                '<img src="' + url + '" loading="lazy" onclick="showImageModal(this)" style="cursor: pointer;">' + 
+                '</div>';
+            } else {
+              return '<div class="message-file">' + 
+                '<a href="' + url + '" target="_blank">📎 下载文件</a>' + '</div>';
+            }
           }).join('') + '</div>';
         }
         return '<div class="message">' +
@@ -261,6 +275,41 @@ export const FRONTEND_HTML = `
     });
 
     fetchMessages();
+    
+    // 图片模态框功能
+    function showImageModal(img) {
+      const modal = document.getElementById('imageModal');
+      const modalImg = document.getElementById('modalImage');
+      
+      modal.style.display = 'block';
+      modalImg.src = img.src;
+    }
+    
+    function closeImageModal() {
+      const modal = document.getElementById('imageModal');
+      modal.style.display = 'none';
+    }
+    
+    // 点击模态框外部关闭
+    window.onclick = function(event) {
+      const modal = document.getElementById('imageModal');
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    }
+    
+    // 视频播放功能
+    function playVideo(video) {
+      if (video.paused) {
+        // 暂停其他视频
+        document.querySelectorAll('video').forEach(v => {
+          if (v !== video) v.pause();
+        });
+        video.play();
+      } else {
+        video.pause();
+      }
+    }
   </script>
 </body>
 </html>
