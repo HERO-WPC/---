@@ -8,7 +8,7 @@ id = "3fc418eb9e924e2bb288836aa1021e16"
 
 [vars]
 # GitHub 配置用于文件上传
-GITHUB_TOKEN = "your_github_token"
-GITHUB_REPO = "username/repository_name"
+GITHUB_TOKEN = "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"
+GITHUB_REPO = "HERO-WPC/guestbook-files"
 GITHUB_BRANCH = "main"  # 可选，默认为 main
 GITHUB_PATH = "uploads/"  # 可选，默认为 uploads/
