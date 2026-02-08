@@ -98,11 +98,13 @@ app.post('/api/upload', async (c) => {
     })
 
     if (!uploadRes.ok) {
-      return c.json({ success: false, error: '上传失败' }, 500)
+      const errorText = await uploadRes.text()
+      console.error('B2 上传失败:', uploadRes.status, errorText)
+      return c.json({ success: false, error: `上传失败: ${uploadRes.status}` }, 500)
     }
 
     // 返回文件访问 URL (使用公开 URL)
-    const fileUrl = `${authData.downloadUrl}/file/guestbook/${fileName}`
+    const fileUrl = `${authData.downloadUrl}/file/${c.env.B2_BUCKET_NAME}/${fileName}`
 
     return c.json({
       success: true,
