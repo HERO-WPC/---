@@ -6,6 +6,7 @@ compatibility_date = "2024-01-01"
 binding = "MESSAGES"
 id = "3fc418eb9e924e2bb288836aa1021e16"
 
-[[r2_buckets]]
-binding = "FILES"
-bucket_name = "guestbook-files"
+[vars]
+# Backblaze B2 授权 (keyID:applicationKey 的 Base64 编码)
+# 示例: echo -n "keyID:applicationKey" | base64
+B2_AUTH = "_base64_encoded_keyID:applicationKey_"

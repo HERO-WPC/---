@@ -56,11 +56,15 @@ export const FRONTEND_HTML = `
     .message-content { color: #555; line-height: 1.6; white-space: pre-wrap; }
     .message-files { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
     .message-file {
-      max-width: 200px; border-radius: 8px; overflow: hidden;
+      max-width: 250px; border-radius: 8px; overflow: hidden;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: #f5f5f5;
     }
     .message-file img, .message-file video {
-      width: 100%; height: auto; display: block; max-height: 200px; object-fit: cover;
+      width: 100%; height: auto; display: block; max-height: 250px; object-fit: cover;
+    }
+    .message-file a {
+      display: block; padding: 8px; color: #667eea; text-decoration: none;
+      font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .preview-files { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
     .preview-item { position: relative; width: 100px; height: 100px; }
@@ -75,11 +79,13 @@ export const FRONTEND_HTML = `
     .loading { text-align: center; padding: 20px; color: #666; }
     .error { background: #ff4757; color: white; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
     .empty { text-align: center; padding: 40px; color: #999; }
+    .info { background: #2196F3; color: white; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>📝 留言板</h1>
+    <div class="info">💡 支持任意格式文件，最大 100MB</div>
     <div id="error" class="error" style="display:none"></div>
     <div class="card">
       <form id="messageForm">
@@ -92,8 +98,8 @@ export const FRONTEND_HTML = `
           <textarea id="content" placeholder="写下你想说的话..." maxLength="2000" required></textarea>
         </div>
         <div class="form-group">
-          <label>附件（最多5个，支持图片和视频）</label>
-          <input type="file" id="fileInput" accept="image/*,video/*" multiple style="display:none">
+          <label>附件（最多5个，最大 100MB）</label>
+          <input type="file" id="fileInput" multiple style="display:none">
           <label for="fileInput" class="file-label">📎 选择文件</label>
         </div>
         <div id="previewFiles" class="preview-files"></div>
@@ -110,6 +116,12 @@ export const FRONTEND_HTML = `
     const API_BASE = window.location.origin;
     let files = [];
     let previews = [];
+    
+    // Backblaze B2 配置
+    const B2_CONFIG = {
+      bucketName: 'my-upload-files',
+      endpoint: 'https://s3.us-west-004.backblazeb2.com'
+    };
 
     document.getElementById('fileInput').addEventListener('change', (e) => {
       const selected = Array.from(e.target.files);
@@ -117,11 +129,16 @@ export const FRONTEND_HTML = `
         alert('最多只能上传5个文件');
         return;
       }
-      files = [...files, ...selected];
       selected.forEach(file => {
+        if (file.size > 100 * 1024 * 1024) {
+          alert(file.name + ' 超过 100MB，已跳过');
+          return;
+        }
+        files.push(file);
         previews.push({
-          url: URL.createObjectURL(file),
-          type: file.type.startsWith('video/') ? 'video' : 'image'
+          name: file.name,
+          type: file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : 'file',
+          url: URL.createObjectURL(file)
         });
       });
       renderPreviews();
@@ -130,7 +147,9 @@ export const FRONTEND_HTML = `
     function renderPreviews() {
       const container = document.getElementById('previewFiles');
       container.innerHTML = previews.map((p, i) => '<div class="preview-item">' + 
-        (p.type === 'video' ? '<video src="' + p.url + '" muted></video>' : '<img src="' + p.url + '">') +
+        (p.type === 'video' ? '<video src="' + p.url + '" muted></video>' : 
+         p.type === 'image' ? '<img src="' + p.url + '">' : 
+         '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f5f5f5;border-radius:8px;font-size:12px;color:#666;">📄</div>') +
         '<button type="button" class="preview-remove" onclick="removeFile(' + i + ')">×</button></div>'
       ).join('');
     }
@@ -141,12 +160,55 @@ export const FRONTEND_HTML = `
       renderPreviews();
     };
 
-    async function uploadFile(file) {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch(API_BASE + '/api/upload', { method: 'POST', body: formData });
+    // 生成授权 Token
+    async function getAuthToken() {
+      const res = await fetch(API_BASE + '/api/b2-auth');
       const data = await res.json();
-      return data.success ? data.data.url : null;
+      return data;
+    }
+
+    // 上传文件到 B2
+    async function uploadToB2(file) {
+      const auth = await getAuthToken();
+      if (!auth.success) {
+        throw new Error('获取上传凭证失败');
+      }
+
+      const fileName = Date.now() + '-' + Math.random().toString(36).slice(2) + '-' + file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      
+      // 获取上传 URL
+      const uploadRes = await fetch(auth.data.uploadUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': auth.data.authorizationToken
+        }
+      });
+      const uploadInfo = await uploadRes.json();
+
+      // 上传文件
+      const arrayBuffer = await file.arrayBuffer();
+      const uploadFileRes = await fetch(uploadInfo.uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': uploadInfo.authorizationToken,
+          'X-Bz-File-Name': fileName,
+          'Content-Type': file.type || 'application/octet-stream',
+          'Content-Length': arrayBuffer.byteLength
+        },
+        body: arrayBuffer
+      });
+
+      if (!uploadFileRes.ok) {
+        throw new Error('上传失败');
+      }
+
+      const result = await uploadFileRes.json();
+      return result.fileName;
+    }
+
+    // 获取文件下载链接
+    function getDownloadUrl(fileName) {
+      return B2_CONFIG.endpoint + '/' + B2_CONFIG.bucketName + '/' + fileName;
     }
 
     async function fetchMessages() {
@@ -162,15 +224,24 @@ export const FRONTEND_HTML = `
         container.innerHTML = '<div class="empty">暂无留言，快来抢沙发！</div>';
         return;
       }
-      container.innerHTML = data.data.map(m => '<div class="message">' +
-        '<div class="message-header"><span class="message-name">👤 ' + m.name + '</span>' +
-        '<span class="message-time">' + new Date(m.createdAt).toLocaleString('zh-CN') + '</span></div>' +
-        '<div class="message-content">' + m.content + '</div>' +
-        (m.files.length > 0 ? '<div class="message-files">' + m.files.map(f => 
-          '<div class="message-file">' + (f.match(/\.(mp4|webm|mov)$/i) ? 
-          '<video src="' + f + '" controls></video>' : '<img src="' + f + '" loading="lazy">') + '</div>'
-        ).join('') + '</div>' : '') + '</div>'
-      ).join('');
+      container.innerHTML = data.data.map(m => {
+        let filesHtml = '';
+        if (m.files && m.files.length > 0) {
+          filesHtml = '<div class="message-files">' + m.files.map(f => {
+            const isVideo = f.match(/\.(mp4|webm|mov|avi|mkv)$/i);
+            const isImage = f.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+            const url = getDownloadUrl(f);
+            return '<div class="message-file">' + 
+              (isVideo ? '<video src="' + url + '" controls></video>' : 
+               isImage ? '<img src="' + url + '" loading="lazy">' : 
+               '<a href="' + url + '" target="_blank">📎 下载文件</a>') + '</div>';
+          }).join('') + '</div>';
+        }
+        return '<div class="message">' +
+          '<div class="message-header"><span class="message-name">👤 ' + m.name + '</span>' +
+          '<span class="message-time">' + new Date(m.createdAt).toLocaleString('zh-CN') + '</span></div>' +
+          '<div class="message-content">' + m.content + '</div>' + filesHtml + '</div>';
+      }).join('');
     }
 
     document.getElementById('messageForm').addEventListener('submit', async (e) => {
@@ -180,28 +251,38 @@ export const FRONTEND_HTML = `
       const btn = document.getElementById('submitBtn');
       if (!name || !content) { alert('请填写昵称和内容'); return; }
       btn.disabled = true;
-      btn.textContent = '发送中...';
-      const uploadedFiles = [];
-      for (const file of files) {
-        const url = await uploadFile(file);
-        if (url) uploadedFiles.push(url);
+      btn.textContent = '上传中...';
+      
+      try {
+        const uploadedFiles = [];
+        for (const file of files) {
+          btn.textContent = '上传 ' + file.name + '...';
+          const fileName = await uploadToB2(file);
+          uploadedFiles.push(fileName);
+        }
+        
+        btn.textContent = '发送中...';
+        const res = await fetch(API_BASE + '/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, content, files: uploadedFiles })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          document.getElementById('name').value = '';
+          document.getElementById('content').value = '';
+          files = [];
+          previews = [];
+          renderPreviews();
+          fetchMessages();
+        } else {
+          alert(data.error || '发送失败');
+        }
+      } catch (err) {
+        alert('上传失败: ' + err.message);
       }
-      const res = await fetch(API_BASE + '/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, content, files: uploadedFiles })
-      });
-      const data = await res.json();
-      if (data.success) {
-        document.getElementById('name').value = '';
-        document.getElementById('content').value = '';
-        files = [];
-        previews = [];
-        renderPreviews();
-        fetchMessages();
-      } else {
-        alert(data.error || '发送失败');
-      }
+      
       btn.disabled = false;
       btn.textContent = '发送留言';
     });
