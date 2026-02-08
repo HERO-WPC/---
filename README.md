@@ -8,7 +8,7 @@
 - 📎 支持任意格式文件 (图片、视频、文档等)
 - 🔒 单文件最大 100MB
 - 📚 最多 5 个附件
-- ☁️ 不支持文件上传
+- 📎 支持图片、视频等文件上传（最大 25MB），存储在 GitHub
 
 ## ☁️ 部署步骤
 
@@ -40,9 +40,25 @@ npx wrangler kv:namespace create "MESSAGES"
 - Variable name: `MESSAGES`
 - 选择你创建的 KV 命名空间
 
+### 3. GitHub 配置（用于文件上传）
+
+#### 创建 GitHub Token
+1. 访问 https://github.com/settings/tokens
+2. 点击 "Generate new token"
+3. 选择 "Fine-grained personal access tokens" 或 "Personal access tokens"
+4. 设置适当的权限（至少需要 repo 权限）
+5. 生成并保存 Token
+
+#### 配置环境变量
+在 Cloudflare Workers Dashboard 中配置以下环境变量：
+- `GITHUB_TOKEN`: 你的 GitHub Token
+- `GITHUB_REPO`: 仓库名称（格式：username/repository）
+- `GITHUB_BRANCH`: 分支名称（可选，默认 main）
+- `GITHUB_PATH`: 上传路径（可选，默认 uploads/）
 
 
-### 4. 部署 Workers
+
+### 5. 部署 Workers
 
 在 Cloudflare Dashboard 中：
 1. 访问 https://dash.cloudflare.com
@@ -62,8 +78,13 @@ guestbook/
 │   ├── src/frontend.ts   # 前端 HTML
 │   ├── package.json
 │   ├── tsconfig.json
-│   └── wrangler.toml
-└── README.md
+│   └── wrangler.toml    # Workers 配置文件
+├── frontend/            # React 前端（可选）
+│   ├── src/
+│   ├── package.json
+│   └── vite.config.ts
+├── README.md
+└── wrangler.json        # 项目配置
 ```
 
 ## 🔧 wrangler.toml 配置
@@ -76,6 +97,13 @@ compatibility_date = "2024-01-01"
 [[kv_namespaces]]
 binding = "MESSAGES"
 id = "YOUR_KV_ID"
+
+[vars]
+# GitHub 配置用于文件上传
+GITHUB_TOKEN = "your_github_token"
+GITHUB_REPO = "username/repository_name"
+GITHUB_BRANCH = "main"  # 可选，默认为 main
+GITHUB_PATH = "uploads/"  # 可选，默认为 uploads/
 ```
 
 ## 💰 免费额度
@@ -83,7 +111,8 @@ id = "YOUR_KV_ID"
 | 服务 | 额度 |
 |------|------|
 | Workers | 每天 10 万次请求 |
-| KV | 1000 次读/写操作/月 |
+| KV | 1000 次读/写操作/月（仅存储文字内容） |
+| GitHub | 文件存储在 GitHub 仓库 |
 
 ## 📝 许可证
 

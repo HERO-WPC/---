@@ -4,6 +4,10 @@ import { FRONTEND_HTML } from './frontend'
 
 interface Env {
   MESSAGES: KVNamespace
+  GITHUB_TOKEN: string
+  GITHUB_REPO: string
+  GITHUB_BRANCH?: string
+  GITHUB_PATH?: string
 }
 
 interface Message {
@@ -32,9 +36,69 @@ app.use('/*', cors({
   allowHeaders: ['Content-Type'],
 }))
 
-// 文件上传功能已移除
+// 上传文件到 GitHub
 app.post('/api/upload', async (c) => {
-  return c.json({ success: false, error: '文件上传功能已禁用' }, 400)
+  try {
+    const formData = await c.req.formData()
+    const file = formData.get('file')
+
+    if (!file || !(file instanceof File)) {
+      return c.json({ success: false, error: '没有文件' }, 400)
+    }
+
+    // 检查文件大小（限制为 25MB，GitHub 单文件限制）
+    if (file.size > 25 * 1024 * 1024) {
+      return c.json({ success: false, error: '文件太大，最大支持 25MB' }, 400)
+    }
+
+    const fileData = await file.arrayBuffer()
+    const fileBase64 = Array.from(new Uint8Array(fileData))
+      .map(byte => String.fromCharCode(byte))
+      .join('')
+    
+    // 需要配置 GitHub 相关环境变量
+    const githubToken = c.env.GITHUB_TOKEN
+    const githubRepo = c.env.GITHUB_REPO  // 格式: username/repo
+    const githubBranch = c.env.GITHUB_BRANCH || 'main'
+    const githubPath = c.env.GITHUB_PATH || 'uploads/'
+    
+    if (!githubToken || !githubRepo) {
+      return c.json({ success: false, error: '未配置 GitHub 上传参数' }, 500)
+    }
+
+    // 生成唯一文件名
+    const fileId = generateUUID()
+    const fileName = fileId + '.' + file.name.split('.').pop()
+    const filePath = githubPath + fileName
+
+    // 上传到 GitHub
+    const uploadRes = await fetch(`https://api.github.com/repos/${githubRepo}/contents/${filePath}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${githubToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: `Upload ${file.name} via guestbook`,
+        content: btoa(fileBase64),
+        branch: githubBranch
+      })
+    })
+
+    const uploadData = await uploadRes.json()
+    if (!uploadRes.ok) {
+      console.error('GitHub 上传失败:', uploadData)
+      return c.json({ success: false, error: '文件上传失败' }, 500)
+    }
+
+    // 返回 GitHub raw 链接
+    const fileUrl = `https://raw.githubusercontent.com/${githubRepo}/${githubBranch}/${filePath}`
+    
+    return c.json({ success: true, data: { url: fileUrl, key: fileName } })
+  } catch (error) {
+    console.error('上传错误:', error)
+    return c.json({ success: false, error: '上传失败' }, 500)
+  }
 })
 
 

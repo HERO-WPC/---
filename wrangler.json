@@ -9,6 +9,8 @@
     }
   ],
   "vars": {
-    "IMGBB_API_KEY": "你的ImgBB_API_Key"
+    "IMGBB_API_KEY": "你的ImgBB_API_Key",
+    "GITHUB_TOKEN": "",
+    "GITHUB_REPO": ""
   }
 }

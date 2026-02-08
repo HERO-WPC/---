@@ -29,19 +29,24 @@ function MessageForm({ onMessagePosted, apiBase }: Props) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.files || [])
-    if (selected.length + files.length > 5) {
-      alert('最多只能上传 5 个文件')
-      return
-    }
-    setFiles(prev => [...prev, ...selected])
-    
-    // 生成预览
-    const newPreviews = selected.map(file => ({
-      url: URL.createObjectURL(file),
-      key: ''
-    }))
-    setPreviews(prev => [...prev, ...newPreviews])
-  }
+          if (selected.length + files.length > 5) {
+          alert('最多只能上传 5 个文件')
+          return
+        }
+            // 检查文件大小
+            for (const file of selected) {
+              if (file.size > 25 * 1024 * 1024) { // 25MB
+                alert(file.name + ' 超过 25MB，已跳过')
+                return
+              }
+            }        setFiles(prev => [...prev, ...selected])
+        
+        // 生成预览
+        const newPreviews = selected.map(file => ({
+          url: URL.createObjectURL(file),
+          key: ''
+        }))
+        setPreviews(prev => [...prev, ...newPreviews])  }
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index))
@@ -150,7 +155,7 @@ function MessageForm({ onMessagePosted, apiBase }: Props) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*,video/*"
+          accept="*/*"
           multiple
           onChange={handleFileChange}
           className="file-input"

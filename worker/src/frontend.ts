@@ -85,7 +85,7 @@ export const FRONTEND_HTML = `
 <body>
   <div class="container">
     <h1>📝 留言板</h1>
-    <div class="info">💡 纯文字留言</div>
+    <div class="info">💡 支持图片、视频等文件上传，最大 25MB</div>
     <div id="error" class="error" style="display:none"></div>
     <div class="card">
       <form id="messageForm">
@@ -97,7 +97,12 @@ export const FRONTEND_HTML = `
           <label>留言内容</label>
           <textarea id="content" placeholder="写下你想说的话..." maxLength="2000" required></textarea>
         </div>
-
+        <div class="form-group">
+          <label>附件（最多5个，最大 25MB）</label>
+          <input type="file" id="fileInput" multiple style="display:none">
+          <label for="fileInput" class="file-label">📎 选择文件</label>
+        </div>
+        <div id="previewFiles" class="preview-files"></div>
         <button type="submit" class="btn" id="submitBtn">发送留言</button>
       </form>
     </div>
@@ -109,12 +114,62 @@ export const FRONTEND_HTML = `
   </div>
   <script>
     const API_BASE = window.location.origin;
+    let files = [];
+    let previews = [];
     
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const selected = Array.from(e.target.files);
+      if (selected.length + files.length > 5) {
+        alert('最多只能上传5个文件');
+        return;
+      }
+      selected.forEach(file => {
+        if (file.size > 25 * 1024 * 1024) {
+          alert(file.name + ' 超过 25MB，已跳过');
+          return;
+        }
+        files.push(file);
+        previews.push({
+          name: file.name,
+          type: file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : 'file',
+          url: URL.createObjectURL(file)
+        });
+      });
+      renderPreviews();
+    });
 
-    // 上传文件（当前已禁用）
+    function renderPreviews() {
+      const container = document.getElementById('previewFiles');
+      container.innerHTML = previews.map((p, i) => '<div class="preview-item">' + 
+        (p.type === 'video' ? '<video src="' + p.url + '" muted></video>' : 
+         p.type === 'image' ? '<img src="' + p.url + '">' : 
+         '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f5f5f5;border-radius:8px;font-size:12px;color:#666;">📄</div>') +
+        '<button type="button" class="preview-remove" onclick="removeFile(' + i + ')">×</button></div>'
+      ).join('');
+    }
+
+    window.removeFile = function(index) {
+      files = files.filter((_, i) => i !== index);
+      previews = previews.filter((_, i) => i !== index);
+      renderPreviews();
+    };
+
+    // 上传文件到 Workers KV
     async function uploadFile(file) {
-      // 当前文件上传功能已禁用
-      throw new Error('文件上传功能已禁用');
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(API_BASE + '/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        return data.data.url;
+      } else {
+        throw new Error(data.error || '上传失败');
+      }
     }
 
     // 获取文件下载链接
@@ -162,13 +217,21 @@ export const FRONTEND_HTML = `
       const btn = document.getElementById('submitBtn');
       if (!name || !content) { alert('请填写昵称和内容'); return; }
       btn.disabled = true;
-      btn.textContent = '发送中...';
+      btn.textContent = '上传中...';
       
       try {
+        const uploadedFiles = [];
+        for (const file of files) {
+          btn.textContent = '上传 ' + file.name + '...';
+          const fileUrl = await uploadFile(file);
+          uploadedFiles.push(fileUrl);
+        }
+        
+        btn.textContent = '发送中...';
         const res = await fetch(API_BASE + '/api/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, content, files: [] })
+          body: JSON.stringify({ name, content, files: uploadedFiles })
         });
         const data = await res.json();
         
@@ -183,7 +246,7 @@ export const FRONTEND_HTML = `
           alert(data.error || '发送失败');
         }
       } catch (err) {
-        alert('发送失败: ' + err.message);
+        alert('上传失败: ' + err.message);
       }
       
       btn.disabled = false;
